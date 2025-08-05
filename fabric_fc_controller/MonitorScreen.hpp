@@ -154,44 +154,44 @@ private:
     uint16_t icon_color = pressure_canvas->color565(240, 235, 220);
 
     switch(button_index) {
-      case 0: // UP (↑)
+      case PAD_UP: // UP (↑)
         pressure_canvas->fillTriangle(center_x, center_y-8, center_x-5, center_y+2, center_x+5, center_y+2, icon_color);
         break;
         
-      case 1: // DOWN (↓)
+      case PAD_DOWN: // DOWN (↓)
         pressure_canvas->fillTriangle(center_x, center_y+8, center_x-5, center_y-2, center_x+5, center_y-2, icon_color);
         break;
         
-      case 2: // LEFT (←)
+      case PAD_LEFT: // LEFT (←)
         pressure_canvas->fillTriangle(center_x-8, center_y, center_x+2, center_y-5, center_x+2, center_y+5, icon_color);
         break;
         
-      case 3: // RIGHT (→)
+      case PAD_RIGHT: // RIGHT (→)
         pressure_canvas->fillTriangle(center_x+8, center_y, center_x-2, center_y-5, center_x-2, center_y+5, icon_color);
         break;
         
-      case 4: // SELECT
+      case BUTTON_SELECT: // SELECT
         pressure_canvas->fillRoundRect(center_x-8, center_y-3, 16, 10, 2, icon_color);
         pressure_canvas->setTextColor(TFT_BLACK);
         pressure_canvas->setTextSize(1);
         pressure_canvas->drawString("SL", center_x-5, center_y-2);
         break;
         
-      case 5: // START
+      case BUTTON_START: // START
         pressure_canvas->fillRoundRect(center_x-8, center_y-3, 16, 10, 2, icon_color);
         pressure_canvas->setTextColor(TFT_BLACK);
         pressure_canvas->setTextSize(1);
         pressure_canvas->drawString("ST", center_x-5, center_y-2);
         break;
         
-      case 6: // B Button
+      case BUTTON_B: // B Button
         pressure_canvas->fillCircle(center_x, center_y, 8, icon_color);
         pressure_canvas->setTextColor(TFT_BLACK);
         pressure_canvas->setTextSize(1);
         pressure_canvas->drawString("B", center_x-2, center_y-3);
         break;
         
-      case 7: // A Button
+      case BUTTON_A: // A Button
         pressure_canvas->fillCircle(center_x, center_y, 8, icon_color);
         pressure_canvas->setTextColor(TFT_BLACK);
         pressure_canvas->setTextSize(1);

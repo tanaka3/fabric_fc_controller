@@ -8,6 +8,22 @@ enum ResetType {
     WORLD = 1,
 };
 
+enum PressType {
+    ABSOLUTE = 0,
+    RELATIVE,
+};
+
+enum FabricFC{
+    PAD_LEFT = 0,
+    PAD_UP,
+    PAD_RIGHT,    
+    PAD_DOWN,
+    BUTTON_SELECT,
+    BUTTON_START,
+    BUTTON_B,
+    BUTTON_A,
+};
+
 class Config{
   private:
     Config() {
@@ -20,20 +36,32 @@ class Config{
     
     // 初期化処理
     void init() {
+        setDefaultThresholdValues();
+        /*
         // EEPROM初期化（512バイト確保）
-        EEPROM.begin(512);
+        if (!EEPROM.begin(512)) {
+            Serial.println("EEPROM初期化に失敗しました");
+            // デフォルト値を設定
+            setDefaultThresholdValues();
+            initialized = true;
+            return;
+        }
         
         // EEPROMから閾値を読み込み
         loadThresholdValues();
-        
+        */
         initialized = true;
     }
 
-    // EEPROMから閾値を読み込み
+     // EEPROMから閾値を読み込み
     void loadThresholdValues() {
         // マジックナンバーをチェック（初回起動判定）
         uint32_t magic = 0;
-        EEPROM.get(EEPROM_MAGIC_ADDR, magic);
+        
+        // バイト単位でマジックナンバーを読み込み
+        for (int i = 0; i < 4; i++) {
+            ((uint8_t*)&magic)[i] = EEPROM.read(EEPROM_MAGIC_ADDR + i);
+        }
         
         if (magic != EEPROM_MAGIC_NUMBER) {
             // 初回起動時：デフォルト値を設定してEEPROMに保存
@@ -42,30 +70,40 @@ class Config{
         } else {
             // 既存データを読み込み
             for (int i = 0; i < 8; i++) {
-                EEPROM.get(EEPROM_THRESHOLD_ADDR + (i * sizeof(float)), threshold_values[i]);
+                // バイト単位でfloatを読み込み
+                uint8_t* float_bytes = (uint8_t*)&threshold_values[i];
+                for (int j = 0; j < sizeof(float); j++) {
+                    float_bytes[j] = EEPROM.read(EEPROM_THRESHOLD_ADDR + (i * sizeof(float)) + j);
+                }
             }
         }
     }
     
     // デフォルト閾値を設定
     void setDefaultThresholdValues() {
-        float default_values[8] = {0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8};
+        float default_threshold_values[8] = {0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6};
         for (int i = 0; i < 8; i++) {
-            threshold_values[i] = default_values[i];
-        }
+            threshold_values[i] = default_threshold_values[i];
+        }       
     }
     
     // 閾値をEEPROMに保存
     void saveThresholdValues() {
         /*
         // マジックナンバーを書き込み
-        EEPROM.put(EEPROM_MAGIC_ADDR, EEPROM_MAGIC_NUMBER);
+        uint32_t magic = EEPROM_MAGIC_NUMBER;
+        for (int i = 0; i < 4; i++) {
+            EEPROM.write(EEPROM_MAGIC_ADDR + i, ((uint8_t*)&magic)[i]);
+        }
         
         // 閾値を書き込み
         for (int i = 0; i < 8; i++) {
-            EEPROM.put(EEPROM_THRESHOLD_ADDR + (i * sizeof(float)), threshold_values[i]);
+            uint8_t* float_bytes = (uint8_t*)&threshold_values[i];
+            for (int j = 0; j < sizeof(float); j++) {
+                EEPROM.write(EEPROM_THRESHOLD_ADDR + (i * sizeof(float)) + j, float_bytes[j]);
+            }
         }
-        
+
         // EEPROMに実際に書き込み
         EEPROM.commit();
         */
@@ -83,6 +121,12 @@ public:
         return initialized;
     }
 
+    // 有効かどうか
+    bool isPressed(int index){
+            return getPressureValue(index) >= getThresholdValue(index);
+
+    }
+    
     // 圧力値の管理
     void setPressureValue(int index, float value) {
         if (index >= 0 && index < 8) {
@@ -131,7 +175,6 @@ public:
         }
         saveThresholdValues(); // 変更時に自動保存
     }
-    
     // 全ての閾値を取得
     const float* getThresholdValues() const {
         return threshold_values;
@@ -148,6 +191,21 @@ public:
         saveThresholdValues();
     }
 
+    void setResetType(ResetType type){
+        reset_type = type;
+    }
+
+    ResetType getResetType(){
+        return reset_type;
+    }
+
+    void setPressType(PressType type){
+        press_type = type;
+    }
+
+    PressType getPressType(){
+        return press_type;
+    }    
 private:
     // EEPROM関連の定数
     static constexpr uint32_t EEPROM_MAGIC_NUMBER = 0x12345678;  // マジックナンバー
@@ -158,9 +216,10 @@ private:
     bool initialized = false;
 
     ResetType reset_type = FC;
+    PressType press_type = ABSOLUTE;
 
     float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
     float threshold_values[8] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; // 各ボタンの基準値（0.0-1.0）
-
+    
 
 };

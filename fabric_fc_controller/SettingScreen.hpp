@@ -15,11 +15,11 @@ enum SettingUpdateFlags {
 // 設定画面クラス
 class SettingScreen : public BaseScreen {  
 private:
-  M5Canvas *var_canvas;
+  M5Canvas *bar_canvas;
   M5Canvas *buttons_canvas;
 
   int selected_button = -1;  // 設定中のボタンインデックス
-  float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
+  //float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
   //float threshold_values[8] = {1.0, 0.5, 0.7, 0.4, 0.8, 0.3, 0.65, 0.55}; // 各ボタンの基準値（0.0-1.0）  
 
   uint8_t update_flags;
@@ -29,8 +29,11 @@ private:
     
     // タイトル
     display->setTextColor(TFT_WHITE);
-    display->setTextSize(2);
-    display->drawString("THRESHOLD SETTING", 20, 10);
+    display->setTextSize(1);
+    String title = "THRESHOLD SETTINGS";    
+    int title_width = title.length() * 6;
+    int title_x = (display->width() - title_width) / 2;    
+    display->drawString(title, title_x, 20);
     
     // ボタンリスト（左側）
     String button_names[] = {"UP", "DOWN", "LEFT", "RIGHT", "SELECT", "START", "B", "A"};
@@ -57,47 +60,68 @@ private:
     buttons_canvas->pushSprite(10, 40);
 
   //
-    var_canvas->fillSprite(TFT_BLACK);
+    bar_canvas->fillSprite(TFT_BLACK);
     
     // マテリアルデザイン風の+ボタン
-    var_canvas->fillRoundRect(0, 0, 90, 30, 4, var_canvas->color565(76, 175, 80)); // Material Green
-    var_canvas->setTextColor(TFT_WHITE);
-    var_canvas->setTextSize(2);
-    var_canvas->drawString("+", 40, 8);
+    bar_canvas->fillRoundRect(0, 0, 90, 30, 4, bar_canvas->color565(76, 175, 80)); // Material Green
+    bar_canvas->setTextColor(TFT_WHITE);
+    bar_canvas->setTextSize(2);
+    bar_canvas->drawString("+", 40, 8);
     
     // マテリアルデザイン風の-ボタン
-    var_canvas->fillRoundRect(0, 245, 90, 30, 4, var_canvas->color565(244, 67, 54)); // Material Red
-    var_canvas->setTextColor(TFT_WHITE);
-    var_canvas->setTextSize(2);
-    var_canvas->drawString("-", 40, 253);
+    bar_canvas->fillRoundRect(0, 245, 90, 30, 4, bar_canvas->color565(244, 67, 54)); // Material Red
+    bar_canvas->setTextColor(TFT_WHITE);
+    bar_canvas->setTextSize(2);
+    bar_canvas->drawString("-", 40, 253);
     
     // === マテリアルデザイン風スライダー ===
     
       // スライダー背景
-    var_canvas->fillRoundRect(10, 45, 60, 185, 2, var_canvas->color565(50, 50, 50));
+    bar_canvas->fillRoundRect(10, 45, 60, 185, 2, bar_canvas->color565(50, 50, 50));
     
+   if( selected_button >= 0){
+      // 圧力レベルと基準値に応じた色分け
+      uint16_t bar_color;
+      if(config.getPressureValue(selected_button) >= config.getThresholdValue(selected_button)) {
+        // 基準値以上：赤（警告）
+        bar_color = bar_canvas->color565(255, 50, 50);
+      } else {
+      // 基準値以下：緑（正常）
+      bar_color = bar_canvas->color565(50, 255, 50);
+      }
+        
+      // メインバー
+      int bar_height = (int)(config.getPressureValue(selected_button) * 185);
+      int y = 45 + 185 - bar_height;      
+      bar_canvas->fillRoundRect(10, y, 60, bar_height, 2, bar_color);
+      
+    }
+
     // スライダー目盛り
-    var_canvas->setTextColor(var_canvas->color565(150, 150, 150));
-    var_canvas->setTextSize(1);
+    bar_canvas->setTextColor(bar_canvas->color565(150, 150, 150));
+    bar_canvas->setTextSize(1);
     for(int i = 0; i <= 10; i++) {
       int mark_y = 45 + (185 * i / 10);
-      var_canvas->drawString(String(100 - i * 10), 75, mark_y - 4);
-      var_canvas->drawFastHLine(10, mark_y, 60, var_canvas->color565(100, 100, 100));
+      bar_canvas->drawString(String(100 - i * 10), 75, mark_y - 4);
+      bar_canvas->drawFastHLine(10, mark_y, 60, bar_canvas->color565(100, 100, 100));
     }
     
     if( selected_button >= 0){
       // スライダーハンドル
-      int handle_y = 85 + (int)((1.0 - config.getThresholdValue(selected_button)) * 185);
-      var_canvas->fillRoundRect(0, handle_y - 8, 90, 16, 8, var_canvas->color565(100, 200, 255));
+      int handle_y = 45 + (int)((1.0 - config.getThresholdValue(selected_button)) * 185);
+      bar_canvas->fillRoundRect(0, handle_y - 8, 90, 16, 8, bar_canvas->color565(100, 200, 255));
       
       // 現在値表示
-      var_canvas->setTextColor(TFT_WHITE);
-      var_canvas->setTextSize(2);
+      bar_canvas->setTextColor(TFT_WHITE);
+      bar_canvas->setTextSize(2);
       String current_value = String((int)(config.getThresholdValue(selected_button) * 100)) + "%";
-      var_canvas->drawString(current_value, 25, handle_y - 8);
+      int value_width = current_value.length() * 12;
+      int value_x = (90 - value_width) / 2; 
+
+      bar_canvas->drawString(current_value, 25, handle_y - 8);
     }
-      
-    var_canvas->pushSprite(130, 40);
+
+    bar_canvas->pushSprite(130, 40);
   }
 
   void handleSettingTouch(int x, int y) {
@@ -139,9 +163,8 @@ private:
     if( selected_button >= 0){
 
       // スライダーエリア（右側）
-      if(x >= 130 && x <= 220 && y >= 85 && y <= 225) {
-        float slider_ratio = (float)(y - 100) / 185.0;
-        slider_ratio = 1.0 - slider_ratio; // 上が1.0、下が0.0になるように反転
+      if(x >= 130 && x <= 220 && y >= 75 && y <= 280) {
+        float slider_ratio = 1.0 - (float)(y - 85) / 185.0;
         if(slider_ratio < 0.0) slider_ratio = 0.0;
         if(slider_ratio > 1.0) slider_ratio = 1.0;
         
@@ -160,9 +183,9 @@ public:
       buttons_canvas->deleteSprite();
       delete buttons_canvas;
     }
-    if (var_canvas){
-      var_canvas->deleteSprite();      
-      delete var_canvas;  
+    if (bar_canvas){
+      bar_canvas->deleteSprite();      
+      delete bar_canvas;  
     }  
   }
     
@@ -174,10 +197,10 @@ public:
     buttons_canvas->createSprite(90, 275);
     buttons_canvas->setRotation(0);
     
-    var_canvas = new M5Canvas(display);
-    var_canvas->setColorDepth(16);
-    var_canvas->createSprite(110, 275);
-    var_canvas->setRotation(0);
+    bar_canvas = new M5Canvas(display);
+    bar_canvas->setColorDepth(16);
+    bar_canvas->createSprite(110, 275);
+    bar_canvas->setRotation(0);
         
     update_flags = UPDATE_ALL;
   }
