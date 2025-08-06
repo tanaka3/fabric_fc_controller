@@ -72,21 +72,25 @@ private:
       // バーの背景（暗いグレー）
       pressure_canvas->fillRect(x, pressure_canvas->height() - 40 - max_height, bar_width, max_height, 
                             pressure_canvas->color565(30, 30, 30));
-      
+
+      int threshold_height = 0;
+      int threshold_y = 0;
       // 基準値ラインを描画
-      int threshold_height = (int)(config.getThresholdValue(i) * max_height);
-      int threshold_y = pressure_canvas->height() - 40 - threshold_height;
-      
-      // 基準値ライン（点線風）
-      uint16_t threshold_line_color = pressure_canvas->color565(255, 255, 255);
-      for(int line_x = x; line_x < x + bar_width; line_x += 3) {
-        pressure_canvas->drawPixel(line_x, threshold_y, threshold_line_color);
-        pressure_canvas->drawPixel(line_x, threshold_y + 1, threshold_line_color);
+      if(config.getPressType() == ABSOLUTE){
+        threshold_height = (int)(config.getThresholdValue(i) * max_height);
+        threshold_y = pressure_canvas->height() - 40 - threshold_height;
+        
+        // 基準値ライン（点線風）
+        uint16_t threshold_line_color = pressure_canvas->color565(255, 255, 255);
+        for(int line_x = x; line_x < x + bar_width; line_x += 3) {
+          pressure_canvas->drawPixel(line_x, threshold_y, threshold_line_color);
+          pressure_canvas->drawPixel(line_x, threshold_y + 1, threshold_line_color);
+        }
       }
       
       // 圧力レベルと基準値に応じた色分け
       uint16_t bar_color;
-      if(config.getPressureValue(i) >= config.getThresholdValue(i)) {
+      if(config.getPressureValue(i) >= config.isPressed(i)) {
         // 基準値以上：赤（警告）
         bar_color = pressure_canvas->color565(255, 50, 50);
       } else {
@@ -100,12 +104,12 @@ private:
       // グロー効果（淡い外枠）
       if(config.getPressureValue(i) > 0.1) {
         uint16_t glow_color;
-        if(config.getPressureValue(i) >= config.getThresholdValue(i)) {
-          // 基準値以上：赤いグロー（警告）
-          glow_color = pressure_canvas->color565(255, 100, 100);
-        } else {
+        if(config.isPressed(i)) {
           // 基準値以下：緑のグロー（正常）
           glow_color = pressure_canvas->color565(100, 255, 100);
+        } else {
+          // 基準値以上：赤いグロー（警告）
+          glow_color = pressure_canvas->color565(255, 100, 100);
         }
         pressure_canvas->drawRect(x + 1, y - 1, bar_width - 2, bar_height + 2, glow_color);
       }
@@ -125,10 +129,12 @@ private:
       pressure_canvas->drawString(value_str, x + (bar_width - text_width)/2, text_y);
       
       // 基準値表示（小さく表示）
-      pressure_canvas->setTextColor(pressure_canvas->color565(200, 200, 200));
-      String threshold_str = String((int)(config.getThresholdValue(i) * 100));
-      int threshold_text_width = threshold_str.length() * 6;
-      pressure_canvas->drawString(threshold_str, x + (bar_width - threshold_text_width)/2, threshold_y - 10);
+      if( config.getPressType() == ABSOLUTE){
+        pressure_canvas->setTextColor(pressure_canvas->color565(200, 200, 200));
+        String threshold_str = String((int)(config.getThresholdValue(i) * 100));
+        int threshold_text_width = threshold_str.length() * 6;
+        pressure_canvas->drawString(threshold_str, x + (bar_width - threshold_text_width)/2, threshold_y - 10);
+      }
       
       // ボタンアイコン
       drawButtonIcon(i, x + bar_width/2, pressure_canvas->height() - 20);

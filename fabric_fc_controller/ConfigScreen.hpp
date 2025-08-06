@@ -143,7 +143,7 @@ private:
     // テキスト2-2
     config_canvas->setTextColor(config_canvas->color565(248, 250, 252));
     config_canvas->setTextSize(1);
-    config_canvas->drawString("Relative", radio4_x + 20, option4_y + 10);
+    config_canvas->drawString("RELATIVE", radio4_x + 20, option4_y + 10);
   }
 
 public:

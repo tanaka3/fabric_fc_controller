@@ -62,7 +62,7 @@ void adcReadTask(void *parameter) {
       portEXIT_CRITICAL(&adcMux);
     }
     
-    controll();
+    //controll();
 
     vTaskDelay(1);
   }
