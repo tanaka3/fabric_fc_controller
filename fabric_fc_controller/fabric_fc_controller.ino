@@ -37,13 +37,11 @@ void setup() {
 
   screen_manager.setScreen(SCREEN_MONITOR);
 
-  /*
   Gamepad.begin();
 
   while(!Gamepad.ready()){
       delay(100);
   }
-  */
 }
 
 void adcReadTask(void *parameter) {
@@ -62,7 +60,7 @@ void adcReadTask(void *parameter) {
       portEXIT_CRITICAL(&adcMux);
     }
     
-    //controll();
+    controll();
 
     vTaskDelay(1);
   }
@@ -161,34 +159,40 @@ void controll(){
  * ZL＋ZR押してメニューのリセットを選ぶ操作
  */
 void resetControll(){
-  Gamepad.reset();
-  Gamepad.press(NSButton_LeftThrottle);
-  Gamepad.press(NSButton_RightThrottle);  
-  Gamepad.SendReport();
-  delay(100);
-  
-  Gamepad.reset();
-  Gamepad.press(NSButton_A);
-  Gamepad.SendReport();
-  /*
-  Gamepad.reset();
-  Gamepad.press(NSButton_LeftThrottle);
-  Gamepad.press(NSButton_RightThrottle);  
-  Gamepad.SendReport();
-  delay(100);
 
-  for(int i=0; i<3; i++){
+  switch(Config::getInstance().getResetType()){
+    case WORLD:
+      Gamepad.reset();
+      Gamepad.press(NSButton_LeftThrottle);
+      Gamepad.press(NSButton_RightThrottle);  
+      Gamepad.SendReport();
+      delay(100);
+      
+      Gamepad.reset();
+      Gamepad.press(NSButton_A);
+      Gamepad.SendReport();
+      break;
+
+  case FC:
     Gamepad.reset();
-    Gamepad.dPad(true, false, false, false);
+    Gamepad.press(NSButton_LeftThrottle);
+    Gamepad.press(NSButton_RightThrottle);  
     Gamepad.SendReport();
-    delay(150);
+    delay(100);
+
+    for(int i=0; i<3; i++){
+      Gamepad.reset();
+      Gamepad.dPad(true, false, false, false);
+      Gamepad.SendReport();
+      delay(150);
+      Gamepad.reset();
+      Gamepad.SendReport();
+      delay(150);
+    }
+    
     Gamepad.reset();
+    Gamepad.press(NSButton_A);
     Gamepad.SendReport();
-    delay(150);
+    break;
   }
-  
-  Gamepad.reset();
-  Gamepad.press(NSButton_A);
-  Gamepad.SendReport();
-  */
 }

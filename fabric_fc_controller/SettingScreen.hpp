@@ -54,7 +54,8 @@ private:
       buttons_canvas->drawString(button_names[i], 10, y_pos + 12);
       
       // 現在の基準値
-      String value_str = String((int)(config.getThresholdValue(i) * 100)) + "%";
+      float value = config.getPressType() == ABSOLUTE ?  config.getThresholdValue(i) : config.getAbsoluteValue(i);
+      String value_str = String((int)( value * 100)) + "%";
       buttons_canvas->drawString(value_str, 60, y_pos + 12);
     }
     buttons_canvas->pushSprite(10, 40);
@@ -82,12 +83,12 @@ private:
    if( selected_button >= 0){
       // 圧力レベルと基準値に応じた色分け
       uint16_t bar_color;
-      if(config.getPressureValue(selected_button) >= config.getThresholdValue(selected_button)) {
+      if(config.isPressed(selected_button)) {
+        // 基準値以下：緑（正常）
+        bar_color = bar_canvas->color565(50, 255, 50);
+      } else {
         // 基準値以上：赤（警告）
         bar_color = bar_canvas->color565(255, 50, 50);
-      } else {
-      // 基準値以下：緑（正常）
-      bar_color = bar_canvas->color565(50, 255, 50);
       }
         
       // メインバー
@@ -108,13 +109,15 @@ private:
     
     if( selected_button >= 0){
       // スライダーハンドル
-      int handle_y = 45 + (int)((1.0 - config.getThresholdValue(selected_button)) * 185);
+
+      float value = config.getPressType() == ABSOLUTE ?  config.getThresholdValue(selected_button) : config.getAbsoluteValue(selected_button);
+      int handle_y = 45 + (int)((1.0 - value) * 185);
       bar_canvas->fillRoundRect(0, handle_y - 8, 90, 16, 8, bar_canvas->color565(100, 200, 255));
       
       // 現在値表示
       bar_canvas->setTextColor(TFT_WHITE);
       bar_canvas->setTextSize(2);
-      String current_value = String((int)(config.getThresholdValue(selected_button) * 100)) + "%";
+      String current_value = String((int)(value * 100)) + "%";
       int value_width = current_value.length() * 12;
       int value_x = (90 - value_width) / 2; 
 
@@ -147,12 +150,25 @@ private:
       // +/-ボタン
       if(x >= 140 && x <= 220) {
         if(y >= 50 && y <= 80) { // +ボタン
-          config.setThresholdValue(selected_button, config.getThresholdValue(selected_button)+ 0.05);
-          if(config.getThresholdValue(selected_button) > 1.0) config.setThresholdValue(selected_button, 1.0f);
+          if(config.getPressType() == ABSOLUTE){
+            config.setThresholdValue(selected_button, config.getThresholdValue(selected_button)+ 0.05);
+            if(config.getThresholdValue(selected_button) > 1.0) config.setThresholdValue(selected_button, 1.0f);
+          }
+          else{
+            config.setAbsoluteValue(selected_button, config.getAbsoluteValue(selected_button)+ 0.05);
+            if(config.getAbsoluteValue(selected_button) > 1.0) config.setAbsoluteValue(selected_button, 1.0f);
+
+          }
           //setting_changed = true;
         } else if(y >= 290 && y <= 320) { // -ボタン
-          config.setThresholdValue(selected_button, config.getThresholdValue(selected_button) - 0.05);
-          if(config.getThresholdValue(selected_button) < 0.0) config.setThresholdValue(selected_button, 0.0f);
+          if(config.getPressType() == ABSOLUTE){        
+            config.setThresholdValue(selected_button, config.getThresholdValue(selected_button) - 0.05);
+            if(config.getThresholdValue(selected_button) < 0.0) config.setThresholdValue(selected_button, 0.0f);
+          }
+          else{
+            config.setAbsoluteValue(selected_button, config.getAbsoluteValue(selected_button) - 0.05);
+            if(config.getAbsoluteValue(selected_button) < 0.0) config.setAbsoluteValue(selected_button, 0.0f);
+          }
           //setting_changed = true;
         }
       }

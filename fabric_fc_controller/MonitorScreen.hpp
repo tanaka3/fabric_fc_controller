@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BaseScreen.hpp"
+#include "switch_tinyuse_custom_esp32.h"
 
 class MonitorScreen : public BaseScreen {  
 private:
@@ -8,7 +9,7 @@ private:
   M5Canvas *pressure_canvas;
   //float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
   //float threshold_values[8] = {0.6, 0.5, 0.7, 0.4, 0.8, 0.3, 0.65, 0.55}; // 各ボタンの基準値（0.0-1.0）
-
+  
   void drawFamicomController(){
     //frame
     controller_canvas->fillRoundRect(0, 0, 240, 120, 3, controller_canvas->color565(166, 20, 31));
@@ -26,10 +27,27 @@ private:
     controller_canvas->fillRect(44, 52, 16, 46, TFT_BLACK);
     controller_canvas->fillRect(29, 67, 46, 16, TFT_BLACK);
 
+    if(config.isPressed(PAD_LEFT)){
+      controller_canvas->fillRect(30, 68, 14, 14, TFT_RED);      
+    }
+    
+    if(config.isPressed(PAD_RIGHT)){      
+      controller_canvas->fillRect(60, 68, 14, 14, TFT_RED);
+    }
+
+    if(config.isPressed(PAD_DOWN)){
+      controller_canvas->fillRect(45, 83, 14, 14, TFT_RED);      
+    }
+  
+    if(config.isPressed(PAD_UP)){
+      controller_canvas->fillRect(45, 53, 14, 14, TFT_RED);      
+    }
+
+
     // start / select 
     controller_canvas->fillRoundRect(92, 80, 60, 20, 4, controller_canvas->color565(166, 20, 31));
-    controller_canvas->fillRect(102, 86, 15, 8, TFT_BLACK);
-    controller_canvas->fillRect(127, 86, 15, 8, TFT_BLACK);
+    controller_canvas->fillRect(102, 86, 15, 8, config.isPressed(BUTTON_SELECT) ? TFT_RED : TFT_BLACK);
+    controller_canvas->fillRect(127, 86, 15, 8, config.isPressed(BUTTON_START) ? TFT_RED : TFT_BLACK);
 
     // button mark
     controller_canvas->fillRoundRect(170, 65, 20, 8, 3, TFT_BLACK);
@@ -39,8 +57,8 @@ private:
     controller_canvas->fillCircle(180, 90, 10, controller_canvas->color565(166, 20, 31));
     controller_canvas->fillCircle(210, 90, 10, controller_canvas->color565(166, 20, 31));
 
-    controller_canvas->fillCircle(180, 90, 8, TFT_BLACK);
-    controller_canvas->fillCircle(210, 90, 8, TFT_BLACK);
+    controller_canvas->fillCircle(180, 90, 8, config.isPressed(BUTTON_B) ? TFT_RED : TFT_BLACK);
+    controller_canvas->fillCircle(210, 90, 8, config.isPressed(BUTTON_A) ? TFT_RED : TFT_BLACK);
 
     controller_canvas->pushSprite(0,0);
   }
@@ -90,29 +108,28 @@ private:
       
       // 圧力レベルと基準値に応じた色分け
       uint16_t bar_color;
-      if(config.getPressureValue(i) >= config.isPressed(i)) {
-        // 基準値以上：赤（警告）
-        bar_color = pressure_canvas->color565(255, 50, 50);
-      } else {
+      if(config.isPressed(i)) {
         // 基準値以下：緑（正常）
         bar_color = pressure_canvas->color565(50, 255, 50);
+      } else {
+        bar_color = pressure_canvas->color565(255, 50, 50);
       }
       
       // メインバー
       pressure_canvas->fillRect(x + 2, y, bar_width - 4, bar_height, bar_color);
       
       // グロー効果（淡い外枠）
-      if(config.getPressureValue(i) > 0.1) {
-        uint16_t glow_color;
-        if(config.isPressed(i)) {
-          // 基準値以下：緑のグロー（正常）
-          glow_color = pressure_canvas->color565(100, 255, 100);
-        } else {
-          // 基準値以上：赤いグロー（警告）
-          glow_color = pressure_canvas->color565(255, 100, 100);
-        }
-        pressure_canvas->drawRect(x + 1, y - 1, bar_width - 2, bar_height + 2, glow_color);
-      }
+      // if(config.getPressureValue(i) > 0.1) {
+      //   uint16_t glow_color;
+      //   if(config.isPressed(i)) {
+      //     // 基準値以下：緑のグロー（正常）
+      //     glow_color = pressure_canvas->color565(100, 255, 100);
+      //   } else {
+      //     // 基準値以上：赤いグロー（警告）
+      //     glow_color = pressure_canvas->color565(255, 100, 100);
+      //   }
+      //   pressure_canvas->drawRect(x + 1, y - 1, bar_width - 2, bar_height + 2, glow_color);
+      // }
       
       // 数値表示（バーの描画範囲内に制限）
       pressure_canvas->setTextColor(TFT_WHITE);

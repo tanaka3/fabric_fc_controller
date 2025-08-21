@@ -16,8 +16,8 @@ enum PressType {
 enum FabricFC{
     PAD_LEFT = 0,
     PAD_UP,
-    PAD_RIGHT,    
     PAD_DOWN,
+    PAD_RIGHT,    
     BUTTON_SELECT,
     BUTTON_START,
     BUTTON_B,
@@ -40,7 +40,6 @@ class Config{
         // ベースライン値を初期化
         for (int i = 0; i < 8; i++) {
             baseline_values[i] = 0.0;
-            previous_values[i] = 0.0;
             button_states[i] = false;
         }
         /*
@@ -182,78 +181,48 @@ public:
         float current_value = getPressureValue(index);
         float baseline = baseline_values[index];
         float threshold = absolute_values[index]; // 相対値の閾値（例：0.1 = 10%）
-        float previous_value = previous_values[index];
         
         // 現在の状態を取得
         bool current_state = button_states[index];
         
-        // 変動方向を判定（前回値と比較）
-        bool is_increasing = current_value > previous_value;
-        bool is_decreasing = current_value < previous_value;
-        
+
         if (!current_state) {
             // ボタンがOFFの場合
-            if (is_increasing) {
-                // 圧力値が上昇に転じた場合
-                if (baseline_values[index] == 0.0 || current_value < baseline) {
-                    // 初回または基準点より下がった場合は基準点を更新
-                    baseline_values[index] = current_value;
-                } else {
-                    // 基準点からの増加率をチェック
-                    float increase_rate = (current_value - baseline) / baseline;
-                    if (increase_rate >= threshold) {
-                        // 一定％増えたらONにする
-                        button_states[index] = true;
-                        previous_values[index] = current_value;
-                        return true;
-                    }
-                }
-            } else if (is_decreasing) {
-                // 圧力が下がった場合は基準点を修正
+            //if (is_increasing) {
+            // 圧力値が上昇に転じた場合
+            if (current_value < baseline) {
+                // 初回または基準点より下がった場合は基準点を更新
                 baseline_values[index] = current_value;
+            } else {
+                // 基準点からの増加率をチェック
+                float increase_rate = current_value - baseline;
+                if (increase_rate >= threshold) {
+                    // 一定％増えたらONにする
+                    button_states[index] = true;
+                    return true;
+                }
             }
         } else {
-            // ボタンがONの場合
-            if (is_decreasing) {
-                // 圧力が減少に転じた場合
-                if (current_value > baseline) {
-                    // 基準点より上がった場合は基準点を更新
-                    baseline_values[index] = current_value;
-                } else {
-                    // 基準点からの減少率をチェック
-                    float decrease_rate = (baseline - current_value) / baseline;
-                    if (decrease_rate >= threshold) {
-                        // 一定％減ったらOFFにする
-                        button_states[index] = false;
-                        previous_values[index] = current_value;
-                        return false;
-                    }
-                }
-            } else if (is_increasing) {
-                // 圧力が上がった場合は基準点を修正
+            // ボタンがONの場合            
+            // 圧力が減少に転じた場合
+            if (current_value > baseline) {
+                // 基準点より上がった場合は基準点を更新
                 baseline_values[index] = current_value;
+            } else {
+                // 基準点からの減少率をチェック
+                float decrease_rate = baseline - current_value;
+                if (decrease_rate >= threshold || current_value < 0.01) {
+                    // 一定％減ったらOFFにする
+                    button_states[index] = false;
+                    return false;
+                }
             }
         }
+
+        // if(index == 0)
+        //     Serial.printf("%d v:%f b:%f  = %d \n",index, current_value, baseline, button_states[index]);
         
-        // 前回値を更新
-        previous_values[index] = current_value;
         return current_state;
-    }
-    
-    // 現在の圧力値をベースラインとして設定（手動キャリブレーション用）
-    void calibrateBaseline(int index) {
-        if (index >= 0 && index < 8) {
-            baseline_values[index] = pressure_values[index];
-            previous_values[index] = pressure_values[index];
-            button_states[index] = false;
-        }
-    }
-    
-    // 全てのボタンをキャリブレーション（手動キャリブレーション用）
-    void calibrateAllBaselines() {
-        for (int i = 0; i < 8; i++) {
-            calibrateBaseline(i);
-        }
     }
 
     // 圧力値の管理（自動ベースライン更新対応）
@@ -371,7 +340,6 @@ public:
                 button_states[i] = false;
                 // 初期化時に現在の圧力値をベースラインとして設定
                 baseline_values[i] = pressure_values[i];
-                previous_values[i] = pressure_values[i];
             }
         }
         saveToEEPROM(); // 変更時に自動保存
@@ -395,7 +363,6 @@ private:
     void setBaselineValue(int index, float value) {
         if (index >= 0 && index < 8) {
             baseline_values[index] = value;
-            previous_values[index] = value;
             button_states[index] = false; // ベースライン設定時は状態をリセット
         }
     }
@@ -412,7 +379,8 @@ private:
     bool initialized = false;
 
     ResetType reset_type = FC;
-    PressType press_type = ABSOLUTE;
+    PressType press_type = RELATIVE;
+    
 
     float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
     float threshold_values[8] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; // 各ボタンの基準値（0.0-1.0）
@@ -420,6 +388,5 @@ private:
     
     // 相対値判定用の追加メンバー
     float baseline_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // ベースライン値（基準点）
-    float previous_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // 前回の圧力値（変動方向判定用）
     bool button_states[8] = {false, false, false, false, false, false, false, false}; // ボタンの現在状態
 };
