@@ -7,8 +7,6 @@ class MonitorScreen : public BaseScreen {
 private:
   M5Canvas *controller_canvas;
   M5Canvas *pressure_canvas;
-  //float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
-  //float threshold_values[8] = {0.6, 0.5, 0.7, 0.4, 0.8, 0.3, 0.65, 0.55}; // 各ボタンの基準値（0.0-1.0）
   
   void drawFamicomController(){
     //frame
@@ -42,7 +40,6 @@ private:
     if(config.isPressed(PAD_UP)){
       controller_canvas->fillRect(45, 53, 14, 14, TFT_RED);      
     }
-
 
     // start / select 
     controller_canvas->fillRoundRect(92, 80, 60, 20, 4, controller_canvas->color565(166, 20, 31));
@@ -91,10 +88,14 @@ private:
       pressure_canvas->fillRect(x, pressure_canvas->height() - 40 - max_height, bar_width, max_height, 
                             pressure_canvas->color565(30, 30, 30));
 
+      // 個別ボタンのプレスタイプを取得
+      PressType button_press_type = config.getButtonPressType(i);
+      
       int threshold_height = 0;
       int threshold_y = 0;
-      // 基準値ラインを描画
-      if(config.getPressType() == ABSOLUTE){
+      
+      // 絶対値モードの場合のみ基準値ラインを描画
+      if(button_press_type == ABSOLUTE){
         threshold_height = (int)(config.getThresholdValue(i) * max_height);
         threshold_y = pressure_canvas->height() - 40 - threshold_height;
         
@@ -106,30 +107,18 @@ private:
         }
       }
       
-      // 圧力レベルと基準値に応じた色分け
+      // 圧力レベルとボタン状態に応じた色分け
       uint16_t bar_color;
       if(config.isPressed(i)) {
-        // 基準値以下：緑（正常）
+        // ボタンが押された状態：緑（正常）
         bar_color = pressure_canvas->color565(50, 255, 50);
       } else {
+        // ボタンが押されていない状態：赤
         bar_color = pressure_canvas->color565(255, 50, 50);
       }
       
       // メインバー
       pressure_canvas->fillRect(x + 2, y, bar_width - 4, bar_height, bar_color);
-      
-      // グロー効果（淡い外枠）
-      // if(config.getPressureValue(i) > 0.1) {
-      //   uint16_t glow_color;
-      //   if(config.isPressed(i)) {
-      //     // 基準値以下：緑のグロー（正常）
-      //     glow_color = pressure_canvas->color565(100, 255, 100);
-      //   } else {
-      //     // 基準値以上：赤いグロー（警告）
-      //     glow_color = pressure_canvas->color565(255, 100, 100);
-      //   }
-      //   pressure_canvas->drawRect(x + 1, y - 1, bar_width - 2, bar_height + 2, glow_color);
-      // }
       
       // 数値表示（バーの描画範囲内に制限）
       pressure_canvas->setTextColor(TFT_WHITE);
@@ -145,16 +134,32 @@ private:
       
       pressure_canvas->drawString(value_str, x + (bar_width - text_width)/2, text_y);
       
-      // 基準値表示（小さく表示）
-      if( config.getPressType() == ABSOLUTE){
+      // 絶対値モードの場合のみ基準値表示（小さく表示）
+      if(button_press_type == ABSOLUTE){
         pressure_canvas->setTextColor(pressure_canvas->color565(200, 200, 200));
         String threshold_str = String((int)(config.getThresholdValue(i) * 100));
         int threshold_text_width = threshold_str.length() * 6;
         pressure_canvas->drawString(threshold_str, x + (bar_width - threshold_text_width)/2, threshold_y - 10);
       }
       
-      // ボタンアイコン
+      // 相対値モードの場合は相対値閾値を表示
+      if(button_press_type == RELATIVE){
+        pressure_canvas->setTextColor(pressure_canvas->color565(200, 200, 255));
+        String relative_str = "R:" + String((int)(config.getAbsoluteValue(i) * 100));
+        int relative_text_width = relative_str.length() * 6;
+        pressure_canvas->drawString(relative_str, x + (bar_width - relative_text_width)/2, bar_top + 12);
+      }
+      
+      // ボタンアイコンとモード表示
       drawButtonIcon(i, x + bar_width/2, pressure_canvas->height() - 20);
+      
+      // モード表示（A/R）
+      pressure_canvas->setTextColor(button_press_type == ABSOLUTE ? 
+                                  pressure_canvas->color565(255, 255, 100) : 
+                                  pressure_canvas->color565(100, 255, 255));
+      pressure_canvas->setTextSize(1);
+      String mode_str = (button_press_type == ABSOLUTE) ? "A" : "R";
+      pressure_canvas->drawString(mode_str, x + bar_width - 8, pressure_canvas->height() - 35);
     }
     
     // ベースライン
@@ -164,12 +169,38 @@ private:
     // タイトル
     pressure_canvas->setTextColor(pressure_canvas->color565(240, 235, 220));
     pressure_canvas->setTextSize(1);
-    String title = "PRESSURE SENSORS";
+    String title = "PRESSURE SENSORS (A=Absolute, R=Relative)";
     int title_width = title.length() * 6;
     int title_x = (pressure_canvas->width() - title_width) / 2;
-    pressure_canvas->drawString(title, title_x, 25);
+    pressure_canvas->drawString(title, title_x, 10);
+    
+    // 統計情報表示
+    drawModeStatistics();
     
     pressure_canvas->pushSprite(0, controller_canvas->height());
+  }
+
+  // モード統計情報を表示
+  void drawModeStatistics() {
+    int absolute_count = 0;
+    int relative_count = 0;
+    
+    // 各モードのカウント
+    for(int i = 0; i < 8; i++) {
+      if(config.getButtonPressType(i) == ABSOLUTE) {
+        absolute_count++;
+      } else {
+        relative_count++;
+      }
+    }
+    
+    // 統計表示
+    pressure_canvas->setTextColor(pressure_canvas->color565(180, 180, 180));
+    pressure_canvas->setTextSize(1);
+    String stats = "Absolute:" + String(absolute_count) + " Relative:" + String(relative_count);
+    int stats_width = stats.length() * 6;
+    int stats_x = (pressure_canvas->width() - stats_width) / 2;
+    pressure_canvas->drawString(stats, stats_x, 25);
   }
 
   // ボタンアイコンを描画する関数
@@ -222,6 +253,7 @@ private:
         break;
     }
   }  
+  
 public:
   MonitorScreen(M5GFX* disp) : BaseScreen(disp) {
   }
@@ -253,7 +285,6 @@ public:
     // デモ用：圧力値をシミュレート
     for(int i = 0; i < 8; i++) {
       config.setPressureValue(i, (sin(millis() * 0.001 + i * 0.5) + 1.0) * 0.5);
-      //pressure_values[i] = (sin(millis() * 0.001 + i * 0.5) + 1.0) * 0.5; // 0.0-1.0の範囲
     }    
   }
   
@@ -262,7 +293,6 @@ public:
     drawFamicomController();
     drawPressureValue();
   }
-
 
   void handleTouch(int x, int y, bool pressed) override {
   }

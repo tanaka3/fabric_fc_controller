@@ -90,11 +90,13 @@ class Config{
                 }
             }
             
+            // button_press_types を読み込み
+            for (int i = 0; i < 8; i++) {
+                button_press_types[i] = (PressType)EEPROM.read(EEPROM_BUTTON_PRESS_TYPE_ADDR + i);
+            }
+            
             // reset_type を読み込み
             reset_type = (ResetType)EEPROM.read(EEPROM_RESET_TYPE_ADDR);
-            
-            // press_type を読み込み
-            press_type = (PressType)EEPROM.read(EEPROM_PRESS_TYPE_ADDR);
         }
     }
     
@@ -112,9 +114,19 @@ class Config{
             absolute_values[i] = default_absolute[i];
         }
         
+        // 各ボタンのデフォルト設定
+        // 十字キー（0-3）とBボタン（6）は相対、それ以外は絶対
+        button_press_types[PAD_LEFT] = RELATIVE;   // 0
+        button_press_types[PAD_UP] = RELATIVE;     // 1
+        button_press_types[PAD_DOWN] = RELATIVE;   // 2
+        button_press_types[PAD_RIGHT] = RELATIVE;  // 3
+        button_press_types[BUTTON_SELECT] = ABSOLUTE; // 4
+        button_press_types[BUTTON_START] = ABSOLUTE;  // 5
+        button_press_types[BUTTON_B] = RELATIVE;      // 6
+        button_press_types[BUTTON_A] = ABSOLUTE;      // 7
+        
         // デフォルト設定
         reset_type = FC;
-        press_type = RELATIVE;//ABSOLUTE;
     }
     
     // 設定値をEEPROMに保存
@@ -142,11 +154,13 @@ class Config{
             }
         }
         
+        // button_press_types を書き込み
+        for (int i = 0; i < 8; i++) {
+            EEPROM.write(EEPROM_BUTTON_PRESS_TYPE_ADDR + i, (uint8_t)button_press_types[i]);
+        }
+        
         // reset_type を書き込み
         EEPROM.write(EEPROM_RESET_TYPE_ADDR, (uint8_t)reset_type);
-        
-        // press_type を書き込み
-        EEPROM.write(EEPROM_PRESS_TYPE_ADDR, (uint8_t)press_type);
         
         // EEPROMに実際に書き込み
         EEPROM.commit();
@@ -165,9 +179,11 @@ public:
         return initialized;
     }
 
-    // 有効かどうか（絶対値・相対値両対応）
+    // 有効かどうか（各ボタン個別の絶対値・相対値対応）
     bool isPressed(int index){
-        if (press_type == ABSOLUTE) {
+        if (index < 0 || index >= 8) return false;
+        
+        if (button_press_types[index] == ABSOLUTE) {
             return getPressureValue(index) >= getThresholdValue(index);
         } else {
             return isPressedRelative(index);
@@ -332,21 +348,56 @@ public:
         return reset_type;
     }
 
-    void setPressType(PressType type){
-        press_type = type;
-        // 相対値モードに切り替える際は全ボタンの状態をリセット
-        if (type == RELATIVE) {
-            for (int i = 0; i < 8; i++) {
-                button_states[i] = false;
+    // 個別ボタンのプレスタイプ設定
+    void setButtonPressType(int index, PressType type){
+        if (index >= 0 && index < 8) {
+            button_press_types[index] = type;
+            // 相対値モードに切り替える際は該当ボタンの状態をリセット
+            if (type == RELATIVE) {
+                button_states[index] = false;
                 // 初期化時に現在の圧力値をベースラインとして設定
+                baseline_values[index] = pressure_values[index];
+            }
+            saveToEEPROM(); // 変更時に自動保存
+        }
+    }
+
+    PressType getButtonPressType(int index){
+        if (index >= 0 && index < 8) {
+            return button_press_types[index];
+        }
+        return ABSOLUTE; // デフォルト値
+    }
+
+    // 全ボタンのプレスタイプを設定
+    void setAllButtonPressTypes(const PressType types[8]){
+        for (int i = 0; i < 8; i++) {
+            button_press_types[i] = types[i];
+            // 相対値モードに切り替える際は該当ボタンの状態をリセット
+            if (types[i] == RELATIVE) {
+                button_states[i] = false;
                 baseline_values[i] = pressure_values[i];
             }
         }
         saveToEEPROM(); // 変更時に自動保存
     }
 
+    // 全ボタンのプレスタイプを取得
+    const PressType* getAllButtonPressTypes() const {
+        return button_press_types;
+    }
+
+    // 旧互換性のためのメソッド（deprecated）
+    void setPressType(PressType type){
+        // 全ボタンに同じタイプを設定
+        for (int i = 0; i < 8; i++) {
+            setButtonPressType(i, type);
+        }
+    }
+
     PressType getPressType(){
-        return press_type;
+        // 最初のボタンのタイプを返す（互換性のため）
+        return button_press_types[0];
     }    
     
 private:
@@ -355,9 +406,9 @@ private:
     static constexpr int EEPROM_MAGIC_ADDR = 0;                  // マジックナンバー保存位置 (4 bytes)
     static constexpr int EEPROM_THRESHOLD_ADDR = 4;              // 閾値保存開始位置 (32 bytes: 8 * 4)
     static constexpr int EEPROM_ABSOLUTE_ADDR = 36;              // 相対値保存開始位置 (32 bytes: 8 * 4)
-    static constexpr int EEPROM_RESET_TYPE_ADDR = 68;            // reset_type保存位置 (1 byte)
-    static constexpr int EEPROM_PRESS_TYPE_ADDR = 69;            // press_type保存位置 (1 byte)
-    // 合計使用量: 70 bytes
+    static constexpr int EEPROM_BUTTON_PRESS_TYPE_ADDR = 68;     // 個別ボタンプレスタイプ保存位置 (8 bytes)
+    static constexpr int EEPROM_RESET_TYPE_ADDR = 76;            // reset_type保存位置 (1 byte)
+    // 合計使用量: 77 bytes
     
     // ベースライン値を設定（内部使用）
     void setBaselineValue(int index, float value) {
@@ -379,12 +430,14 @@ private:
     bool initialized = false;
 
     ResetType reset_type = FC;
-    PressType press_type = RELATIVE;
     
 
     float pressure_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // デモ用の圧力値
     float threshold_values[8] = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}; // 各ボタンの基準値（0.0-1.0）
     float absolute_values[8] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1}; // 各ボタンの相対値 (0.0-1.0)
+    
+    // 個別ボタンのプレスタイプ設定
+    PressType button_press_types[8] = {RELATIVE, RELATIVE, RELATIVE, RELATIVE, ABSOLUTE, ABSOLUTE, RELATIVE, ABSOLUTE};
     
     // 相対値判定用の追加メンバー
     float baseline_values[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}; // ベースライン値（基準点）

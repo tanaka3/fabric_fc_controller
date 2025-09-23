@@ -6,6 +6,7 @@
 #include "SettingScreen.hpp"
 #include "ConfigScreen.hpp"
 #include "MonitorScreen.hpp"
+#include "ButtonModeScreen.hpp"
 
 #include <vector>
 
@@ -21,6 +22,7 @@ enum ScreenType {
     SCREEN_CONFIG = 0,
     SCREEN_MONITOR,
     SCREEN_SETTING,
+    SCREEN_BUTTON_MODE,
     SCREEN_END
 };
 
@@ -31,7 +33,7 @@ private:
 
     uint8_t current_screen_type = SCREEN_MONITOR;
 
-    ScreenType screen_list[SCREEN_END] = {SCREEN_CONFIG, SCREEN_MONITOR, SCREEN_SETTING};
+    ScreenType screen_list[SCREEN_END] = {SCREEN_CONFIG, SCREEN_BUTTON_MODE ,SCREEN_MONITOR, SCREEN_SETTING};
     
     bool clear_screen = false;
 
@@ -156,6 +158,9 @@ public:
                 break;
             case SCREEN_CONFIG:
                 screen = new ConfigScreen(display);
+                break;
+            case SCREEN_BUTTON_MODE:
+                screen = new ButtonModeScreen(display);
                 break;
         }
         

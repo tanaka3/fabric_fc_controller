@@ -79,73 +79,6 @@ private:
 
   } 
 
-  void drawPressType(){
-    int card2_y = ConfigScreen::CARD_HEIGHT + 45;
-
-    // カード2背景
-    config_canvas->fillRoundRect(ConfigScreen::CARD_X, card2_y,  
-                                  ConfigScreen::CARD_WIDTH, ConfigScreen::CARD_HEIGHT, 8, 
-                                  config_canvas->color565(39, 39, 42));
-
-    // カード2タイトル
-    config_canvas->setTextColor(config_canvas->color565(79, 172, 254));
-    config_canvas->setTextSize(1);
-    config_canvas->drawString("PRESS TYPE", ConfigScreen::CARD_X + 15, card2_y + 12);
-
-    // カード2の装飾ライン
-    config_canvas->fillRect(ConfigScreen::CARD_X + 15, card2_y + 27,  
-                            ConfigScreen::CARD_WIDTH - 30, 1, 
-                            config_canvas->color565(71, 85, 105));
-
-    // オプション2-1: Standard
-    int option3_y = card2_y + 40;
-
-    // 選択背景
-    if (Config::getInstance().getPressType() == ABSOLUTE) {
-        config_canvas->fillRoundRect(ConfigScreen::CARD_X + 5, option3_y - 5,  
-                                      ConfigScreen::CARD_WIDTH - 10, ConfigScreen::OPTION_HEIGHT, 6, 
-                                      config_canvas->color565(59, 130, 246));
-    }
-
-    // ラジオボタン2-1
-    int radio3_x = ConfigScreen::CARD_X + 25;
-    int radio3_y = option3_y + 15;
-    config_canvas->drawCircle(radio3_x, radio3_y, 8, config_canvas->color565(248, 250, 252) );
-    config_canvas->drawCircle(radio3_x, radio3_y, 7, config_canvas->color565(248, 250, 252) );
-    if (Config::getInstance().getPressType() == ABSOLUTE) {
-        config_canvas->fillCircle(radio3_x, radio3_y, 4, config_canvas->color565(248, 250, 252));
-    }
-
-    // テキスト2-1
-    config_canvas->setTextColor(config_canvas->color565(248, 250, 252) );
-    config_canvas->setTextSize(1);
-    config_canvas->drawString("Absolute", radio3_x + 20, option3_y + 10);
-
-    // オプション2-2: Championships
-    int option4_y = option3_y + ConfigScreen::OPTION_HEIGHT + 5;
-
-    // 選択背景
-    if (Config::getInstance().getPressType() == RELATIVE) {
-        config_canvas->fillRoundRect(ConfigScreen::CARD_X + 5, option4_y - 5,  
-                                      ConfigScreen::CARD_WIDTH - 10, ConfigScreen::OPTION_HEIGHT, 6, 
-                                      config_canvas->color565(59, 130, 246));
-    }
-
-    // ラジオボタン2-2
-    int radio4_x = ConfigScreen::CARD_X + 25;
-    int radio4_y = option4_y + 15;
-    config_canvas->drawCircle(radio4_x, radio4_y, 8, config_canvas->color565(248, 250, 252));
-    config_canvas->drawCircle(radio4_x, radio4_y, 7, config_canvas->color565(248, 250, 252));
-    if (Config::getInstance().getPressType() == RELATIVE) {
-        config_canvas->fillCircle(radio4_x, radio4_y, 4, config_canvas->color565(248, 250, 252));
-    }
-
-    // テキスト2-2
-    config_canvas->setTextColor(config_canvas->color565(248, 250, 252));
-    config_canvas->setTextSize(1);
-    config_canvas->drawString("RELATIVE", radio4_x + 20, option4_y + 10);
-  }
-
 public:
   ConfigScreen(M5GFX* disp) : BaseScreen(disp) {
   }
@@ -183,7 +116,6 @@ public:
 
     // カード共通設定
     drawResetType();
-    drawPressType();
 
     config_canvas->pushSprite(0, 0);
   }
